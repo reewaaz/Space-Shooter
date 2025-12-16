@@ -3,27 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Neon Galaxy: Mobile Warfare</title>
-    
-    <!-- PeerJS for Multiplayer Networking -->
+    <title>NEON OMEGA: Co-Op Survival</title>
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
-
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700;900&display=swap');
+
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff00ff;
+            --neon-green: #00ff66;
+            --neon-yellow: #ffcc00;
+            --bg-color: #050510;
+        }
 
         * {
             box-sizing: border-box;
-            touch-action: none; /* Prevents scroll/zoom on mobile */
+            touch-action: none;
             user-select: none;
             -webkit-user-select: none;
         }
 
         body {
             margin: 0;
-            padding: 0;
-            background-color: #000;
+            background-color: var(--bg-color);
             overflow: hidden;
-            font-family: 'Rajdhani', sans-serif;
+            font-family: 'Exo 2', sans-serif;
             color: white;
         }
 
@@ -33,7 +37,7 @@
             height: 100vh;
         }
 
-        /* --- UI LAYER --- */
+        /* --- UI LAYERS --- */
         #ui-layer {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -44,83 +48,94 @@
         }
 
         .hud-top {
-            padding: 15px;
             display: flex;
             justify-content: space-between;
+            padding: 15px 25px;
             background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
         }
 
-        .score-box { font-size: 24px; color: #0ff; text-shadow: 0 0 10px #0ff; }
-        .hp-box { font-size: 24px; color: #f00; text-shadow: 0 0 10px #f00; }
+        .stat-box { font-size: 1.2rem; font-weight: 700; }
+        .score { color: var(--neon-yellow); }
+        .wave { color: var(--neon-pink); }
 
-        /* --- CONTROLS --- */
-        #controls-area {
+        .health-bar-container {
+            width: 200px; height: 10px;
+            background: #333;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .health-bar {
+            height: 100%;
+            background: var(--neon-green);
+            width: 100%;
+            transition: width 0.2s;
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        /* --- TOUCH CONTROLS --- */
+        #controls-layer {
             position: absolute;
             bottom: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; /* Let clicks pass through to canvas? No, specific zones */
-            z-index: 5;
+            pointer-events: none;
+            z-index: 10;
         }
 
-        .control-zone {
+        .joystick-zone {
             position: absolute;
-            bottom: 20px;
-            width: 150px; height: 150px;
+            bottom: 40px;
+            width: 160px; height: 160px;
             pointer-events: auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
+        #stick-left-zone { left: 40px; }
+        #stick-right-zone { right: 40px; }
 
-        #joystick-zone { left: 20px; bottom: 20px; }
-        #action-zone { right: 20px; bottom: 20px; }
-
-        /* Joystick Visuals */
-        .joystick-base {
-            width: 120px; height: 120px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
+        .stick-base {
+            width: 100%; height: 100%;
             border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.2);
             position: relative;
+            display: flex; justify-content: center; align-items: center;
         }
-
-        .joystick-stick {
-            width: 50px; height: 50px;
-            background: rgba(0, 255, 255, 0.5);
-            border-radius: 50%;
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 15px #0ff;
-        }
-
-        /* Buttons */
-        .fire-btn {
-            width: 90px; height: 90px;
-            background: rgba(255, 50, 50, 0.3);
-            border: 2px solid #f00;
-            border-radius: 50%;
-            display: flex;
-            align-items: center; justify-content: center;
-            font-size: 18px; font-weight: bold;
-            box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
-            transition: 0.1s;
-        }
-        .fire-btn:active { background: rgba(255, 50, 50, 0.8); transform: scale(0.95); }
-
-        .switch-btn {
-            position: absolute;
-            bottom: 140px; right: 30px;
+        
+        .stick-thumb {
             width: 60px; height: 60px;
-            background: rgba(255, 255, 0, 0.2);
-            border: 1px solid #ff0;
             border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+            position: absolute;
+            transform: translate(0,0);
+            transition: transform 0.05s linear;
+        }
+
+        .weapon-selector {
+            position: absolute;
+            bottom: 180px; right: 20px;
+            display: flex; flex-direction: column; gap: 15px;
             pointer-events: auto;
-            display: flex; align-items: center; justify-content: center;
+        }
+
+        .w-btn {
+            width: 50px; height: 50px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(0,0,0,0.6);
+            color: #fff;
             font-size: 24px;
+            display: flex; align-items: center; justify-content: center;
+            transition: 0.2s;
+        }
+        .w-btn.active {
+            border-color: var(--neon-blue);
+            background: rgba(0, 243, 255, 0.2);
+            box-shadow: 0 0 15px var(--neon-blue);
+            transform: scale(1.1);
         }
 
         /* --- MENUS --- */
-        #menu-overlay {
+        #menu-screen {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(5, 5, 10, 0.95);
@@ -128,589 +143,846 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            pointer-events: auto;
-            z-index: 20;
-            text-align: center;
+            z-index: 100;
+            backdrop-filter: blur(10px);
         }
 
         h1 {
-            font-size: 4rem; margin: 0;
-            background: linear-gradient(to right, #0ff, #f0f);
+            font-size: 5rem; margin: 0;
+            background: linear-gradient(90deg, var(--neon-blue), var(--neon-pink));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            text-transform: uppercase;
+            text-shadow: 0 0 30px rgba(0,243,255,0.5);
+            letter-spacing: 5px;
+            font-style: italic;
         }
 
-        .btn-main {
+        .btn {
             margin: 15px;
-            padding: 15px 40px;
+            padding: 20px 60px;
             font-size: 1.5rem;
-            background: transparent;
-            border: 2px solid #0ff;
-            color: #0ff;
+            font-weight: bold;
             font-family: inherit;
-            border-radius: 30px;
+            color: var(--neon-blue);
+            background: transparent;
+            border: 2px solid var(--neon-blue);
+            border-radius: 5px;
             cursor: pointer;
-            width: 80%;
-            max-width: 400px;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px rgba(0,243,255,0.2);
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 40px rgba(0,243,255,0.6);
         }
 
-        .btn-main:active { background: #0ff; color: #000; }
-
-        #qr-container {
-            margin-top: 20px;
-            background: white;
-            padding: 10px;
-            border-radius: 10px;
+        #qr-display {
             display: none;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
         }
+        #qr-display p { color: #000; margin: 5px 0 0 0; font-weight: bold; }
 
-        #lobby-status {
-            margin-top: 10px;
-            color: #aaa;
-            font-size: 1.2rem;
-            animation: pulse 1s infinite;
-        }
-
-        @keyframes pulse { 0%{opacity:0.5;} 50%{opacity:1;} 100%{opacity:0.5;} }
-
-        /* Rotate Warning for Portrait Mode */
-        #rotate-warning {
+        .hidden { display: none !important; }
+        
+        #rotate-msg {
             display: none;
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 100;
+            background: #000; z-index: 999;
+            color: var(--neon-blue);
             align-items: center; justify-content: center;
             flex-direction: column;
+            font-size: 1.5rem;
         }
+
         @media (orientation: portrait) {
-            #rotate-warning { display: flex; }
+            #rotate-msg { display: flex; }
+        }
+        
+        /* PC Controls hint */
+        .pc-hint {
+            position: absolute;
+            bottom: 20px; left: 50%; transform: translateX(-50%);
+            color: #555; font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
 
-    <!-- Rotation Warning -->
-    <div id="rotate-warning">
-        <div style="font-size: 50px;">🔄</div>
-        <p>PLEASE ROTATE DEVICE</p>
+    <div id="rotate-msg">
+        <div style="font-size: 3rem; margin-bottom: 20px;">↻</div>
+        PLEASE ROTATE DEVICE
     </div>
 
-    <!-- Canvas -->
     <canvas id="gameCanvas"></canvas>
 
-    <!-- Game UI -->
-    <div id="ui-layer" style="display:none;">
+    <!-- UI -->
+    <div id="ui-layer" class="hidden">
         <div class="hud-top">
-            <div class="score-box" id="scoreEl">SCORE: 0</div>
-            <div class="hp-box" id="hpEl">HP: 100%</div>
+            <div>
+                <div class="stat-box" style="color:var(--neon-blue)">PLAYER 1</div>
+                <div class="health-bar-container"><div id="hp-bar" class="health-bar"></div></div>
+            </div>
+            <div style="text-align: center;">
+                <div class="stat-box wave" id="wave-disp">WAVE 1</div>
+                <div style="font-size: 0.9rem; color:#aaa;">ENEMIES: <span id="enemy-count">0</span></div>
+            </div>
+            <div style="text-align: right;">
+                <div class="stat-box score" id="score-disp">000000</div>
+                <div style="font-size: 0.9rem; color:#aaa;" id="p2-status">P2: OFFLINE</div>
+            </div>
         </div>
 
-        <div id="controls-area">
-            <!-- Left Stick -->
-            <div id="joystick-zone" class="control-zone">
-                <div class="joystick-base" id="joyBase">
-                    <div class="joystick-stick" id="joyStick"></div>
-                </div>
-            </div>
-
-            <!-- Weapon Switch -->
-            <div class="switch-btn" id="btnSwitch">🔫</div>
-
-            <!-- Fire Button -->
-            <div id="action-zone" class="control-zone">
-                <div class="fire-btn" id="btnFire">FIRE</div>
-            </div>
+        <!-- Weapon Switcher -->
+        <div class="weapon-selector">
+            <div class="w-btn active" onclick="switchWeapon(0)">1</div>
+            <div class="w-btn" onclick="switchWeapon(1)">2</div>
+            <div class="w-btn" onclick="switchWeapon(2)">3</div>
         </div>
     </div>
 
-    <!-- Main Menu -->
-    <div id="menu-overlay">
-        <h1>NEON GALAXY</h1>
-        <p style="color: #888; margin-bottom: 30px;">MOBILE DEFENSE SYSTEM</p>
-        
-        <button class="btn-main" onclick="startSinglePlayer()">SINGLE PLAYER</button>
-        <button class="btn-main" onclick="startHost()">MULTIPLAYER HOST</button>
-        
-        <div id="lobby-status"></div>
-        <div id="qr-container">
-            <img id="qr-img" src="" alt="Scan to Join" width="200" height="200" />
-            <p style="color:#000; margin:5px 0 0 0; font-size:14px;">Scan to Join</p>
+    <!-- Controls -->
+    <div id="controls-layer" class="hidden">
+        <div id="stick-left-zone" class="joystick-zone">
+            <div class="stick-base"><div class="stick-thumb" id="thumb-left"></div></div>
         </div>
-        <p id="invite-link" style="font-size:12px; color:#555; margin-top:10px; user-select:text;"></p>
+        <div id="stick-right-zone" class="joystick-zone">
+            <div class="stick-base"><div class="stick-thumb" id="thumb-right"></div></div>
+        </div>
+        <div class="pc-hint">PC: WASD to Move | Mouse to Aim & Shoot | 1-3 Change Weapon</div>
+    </div>
+
+    <!-- Menu -->
+    <div id="menu-screen">
+        <h1>NEON OMEGA</h1>
+        <p style="color: #888; margin-bottom: 40px;">CO-OP SURVIVAL PROTOCOL</p>
+        
+        <button class="btn" onclick="initGame('single')">SINGLE PLAYER</button>
+        <button class="btn" onclick="initGame('host')">HOST MULTIPLAYER</button>
+        
+        <div id="qr-display">
+            <img id="qr-img" src="" width="180" height="180" alt="QR Code">
+            <p>SCAN TO JOIN</p>
+            <p style="font-size: 10px; color: #555; margin-top: 5px;" id="invite-url"></p>
+        </div>
+        <div id="status-msg" style="margin-top: 20px; color: var(--neon-green); min-height: 20px;"></div>
     </div>
 
 <script>
 /**
- * MOBILE GAME ENGINE & MULTIPLAYER LOGIC
+ * CORE ENGINE & CONFIG
  */
-
-// --- CONFIGURATION ---
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-let width, height;
+let W, H;
 
-// --- STATE ---
-let gameActive = false;
-let isMultiplayer = false;
-let isHost = false;
-let peer = null;
-let conn = null;
-let myId = null;
+// Game State
+let gameState = {
+    running: false,
+    mode: 'single', // single, host, client
+    score: 0,
+    wave: 1,
+    shake: 0,
+    enemies: [],
+    bullets: [],
+    particles: [],
+    powerups: [],
+    stars: []
+};
 
-// Game Entities
-let player = { x: 0, y: 0, angle: 0, hp: 100, weapon: 0, color: '#0ff' };
-let remotePlayer = { active: false, x: 0, y: 0, angle: 0, hp: 100, color: '#f0f' };
-let bullets = [];
-let enemies = [];
-let particles = [];
-let score = 0;
-let wave = 1;
-let frames = 0;
+// Player Local
+const me = {
+    id: 'p1',
+    x: 0, y: 0,
+    vx: 0, vy: 0,
+    hp: 100, maxHp: 100,
+    angle: 0,
+    weapon: 0,
+    lastShot: 0,
+    color: '#00f3ff',
+    input: { x: 0, y: 0, aimX: 0, aimY: 0, firing: false }
+};
 
-// Inputs
-const input = { x: 0, y: 0, fire: false, switch: false };
+// Player Remote (P2)
+const other = {
+    active: false,
+    x: 0, y: 0,
+    angle: 0,
+    hp: 100,
+    color: '#ff00ff',
+    targetX: 0, targetY: 0 // Interpolation
+};
 
-// --- AUDIO SYNTH (No external files) ---
-const actx = new (window.AudioContext || window.webkitAudioContext)();
-function playSound(type) {
-    if(actx.state === 'suspended') actx.resume();
-    const osc = actx.createOscillator();
-    const gain = actx.createGain();
-    const now = actx.currentTime;
-    
-    if (type === 'shoot') {
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(300, now);
-        osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.1);
-        osc.start(now);
-        osc.stop(now + 0.1);
-    } else if (type === 'explode') {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(100, now);
-        osc.frequency.exponentialRampToValueAtTime(10, now + 0.3);
-        gain.gain.setValueAtTime(0.2, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.3);
-        osc.start(now);
-        osc.stop(now + 0.3);
+// --- AUDIO ---
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const actx = new AudioContext();
+
+const Sound = {
+    play: (type) => {
+        if(actx.state === 'suspended') actx.resume();
+        const osc = actx.createOscillator();
+        const gain = actx.createGain();
+        const now = actx.currentTime;
+
+        if(type === 'shoot') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+        }
+        else if(type === 'heavy') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(50, now + 0.2);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+        }
+        else if(type === 'explode') {
+            const buf = actx.createBuffer(1, actx.sampleRate * 0.5, actx.sampleRate);
+            const data = buf.getChannelData(0);
+            for(let i=0; i<data.length; i++) data[i] = Math.random() * 2 - 1;
+            const src = actx.createBufferSource();
+            src.buffer = buf;
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+            src.connect(gain);
+            gain.connect(actx.destination);
+            src.start(now);
+            return; // buffer source doesn't use osc connect
+        }
+        osc.connect(gain);
+        gain.connect(actx.destination);
     }
-}
+};
 
-// --- RESIZE & FULLSCREEN ---
+// --- RESIZE ---
 function resize() {
-    width = canvas.width = window.innerWidth;
-    height = canvas.height = window.innerHeight;
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    // Init stars
+    gameState.stars = Array(100).fill().map(() => ({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        z: Math.random() * 2 + 0.5
+    }));
 }
 window.addEventListener('resize', resize);
 resize();
 
-// --- TOUCH CONTROLS (JOYSTICK) ---
-const joyBase = document.getElementById('joyBase');
-const joyStick = document.getElementById('joyStick');
-const joyZone = document.getElementById('joystick-zone');
-let joyTouchId = null;
-let joyCenter = { x: 0, y: 0 };
-const maxDist = 40;
+// --- CONTROLS (Virtual Joysticks) ---
+const sticks = {
+    left: { x: 0, y: 0, active: false, el: document.getElementById('thumb-left'), base: document.getElementById('stick-left-zone') },
+    right: { x: 0, y: 0, active: false, el: document.getElementById('thumb-right'), base: document.getElementById('stick-right-zone') }
+};
 
-joyZone.addEventListener('touchstart', e => {
+function handleTouch(e, type) {
     e.preventDefault();
-    const touch = e.changedTouches[0];
-    joyTouchId = touch.identifier;
-    const rect = joyBase.getBoundingClientRect();
-    joyCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
-    updateJoystick(touch.clientX, touch.clientY);
-}, {passive: false});
+    for (let i = 0; i < e.changedTouches.length; i++) {
+        const t = e.changedTouches[i];
+        const rectL = sticks.left.base.getBoundingClientRect();
+        const rectR = sticks.right.base.getBoundingClientRect();
 
-joyZone.addEventListener('touchmove', e => {
-    e.preventDefault();
-    for(let i=0; i<e.changedTouches.length; i++) {
-        if(e.changedTouches[i].identifier === joyTouchId) {
-            updateJoystick(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+        // Check Left Stick
+        if (type === 'start' || (type === 'move' && sticks.left.active)) {
+            const dx = t.clientX - (rectL.left + rectL.width/2);
+            const dy = t.clientY - (rectL.top + rectL.height/2);
+            if (Math.hypot(dx, dy) < 100 || sticks.left.active) {
+                if (type === 'start') sticks.left.id = t.identifier;
+                if (t.identifier === sticks.left.id) {
+                    sticks.left.active = true;
+                    updateStickVisual(sticks.left, dx, dy);
+                    me.input.x = sticks.left.x; 
+                    me.input.y = sticks.left.y;
+                }
+            }
+        }
+
+        // Check Right Stick
+        if (type === 'start' || (type === 'move' && sticks.right.active)) {
+            const dx = t.clientX - (rectR.left + rectR.width/2);
+            const dy = t.clientY - (rectR.top + rectR.height/2);
+            if (Math.hypot(dx, dy) < 100 || sticks.right.active) {
+                if (type === 'start') sticks.right.id = t.identifier;
+                if (t.identifier === sticks.right.id) {
+                    sticks.right.active = true;
+                    updateStickVisual(sticks.right, dx, dy);
+                    me.input.aimX = sticks.right.x;
+                    me.input.aimY = sticks.right.y;
+                    me.input.firing = true;
+                }
+            }
         }
     }
-}, {passive: false});
+    
+    if (type === 'end') {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === sticks.left.id) {
+                sticks.left.active = false;
+                updateStickVisual(sticks.left, 0, 0);
+                me.input.x = 0; me.input.y = 0;
+            }
+            if (e.changedTouches[i].identifier === sticks.right.id) {
+                sticks.right.active = false;
+                updateStickVisual(sticks.right, 0, 0);
+                me.input.firing = false;
+            }
+        }
+    }
+}
 
-joyZone.addEventListener('touchend', e => {
-    e.preventDefault();
-    resetJoystick();
-}, {passive: false});
-
-function updateJoystick(x, y) {
-    let dx = x - joyCenter.x;
-    let dy = y - joyCenter.y;
-    const dist = Math.min(Math.hypot(dx, dy), maxDist);
+function updateStickVisual(stick, dx, dy) {
+    const max = 40;
+    const dist = Math.min(Math.hypot(dx, dy), max);
     const angle = Math.atan2(dy, dx);
-    
-    const moveX = Math.cos(angle) * dist;
-    const moveY = Math.sin(angle) * dist;
-    
-    joyStick.style.transform = `translate(calc(-50% + ${moveX}px), calc(-50% + ${moveY}px))`;
-    
-    // Normalize input -1 to 1
-    input.x = moveX / maxDist;
-    input.y = moveY / maxDist;
+    const mx = Math.cos(angle) * dist;
+    const my = Math.sin(angle) * dist;
+    stick.el.style.transform = `translate(${mx}px, ${my}px)`;
+    // Normalize -1 to 1
+    stick.x = mx / max;
+    stick.y = my / max;
 }
 
-function resetJoystick() {
-    joyTouchId = null;
-    joyStick.style.transform = `translate(-50%, -50%)`;
-    input.x = 0;
-    input.y = 0;
-}
+const controlsLayer = document.getElementById('controls-layer');
+controlsLayer.addEventListener('touchstart', e => handleTouch(e, 'start'), {passive:false});
+controlsLayer.addEventListener('touchmove', e => handleTouch(e, 'move'), {passive:false});
+controlsLayer.addEventListener('touchend', e => handleTouch(e, 'end'), {passive:false});
 
-// --- BUTTON CONTROLS ---
-const btnFire = document.getElementById('btnFire');
-const btnSwitch = document.getElementById('btnSwitch');
-
-btnFire.addEventListener('touchstart', (e) => { e.preventDefault(); input.fire = true; btnFire.style.background='rgba(255,255,255,0.5)'; });
-btnFire.addEventListener('touchend', (e) => { e.preventDefault(); input.fire = false; btnFire.style.background=''; });
-
-btnSwitch.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    player.weapon = (player.weapon + 1) % 3;
-    const icons = ['🔫', '🚀', '⚡'];
-    btnSwitch.innerText = icons[player.weapon];
+// PC Controls
+const keys = {};
+window.addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if(e.key === '1') switchWeapon(0);
+    if(e.key === '2') switchWeapon(1);
+    if(e.key === '3') switchWeapon(2);
 });
-
+window.addEventListener('keyup', e => keys[e.code] = false);
+window.addEventListener('mousemove', e => {
+    if(!sticks.right.active) { // Only if not touching
+        const rect = canvas.getBoundingClientRect();
+        const angle = Math.atan2(e.clientY - me.y, e.clientX - me.x);
+        me.input.aimX = Math.cos(angle);
+        me.input.aimY = Math.sin(angle);
+    }
+});
+window.addEventListener('mousedown', () => me.input.firing = true);
+window.addEventListener('mouseup', () => me.input.firing = false);
 
 // --- GAME LOGIC ---
 
 class Particle {
-    constructor(x, y, color) {
+    constructor(x, y, color, speed, life) {
         this.x = x; this.y = y; this.color = color;
-        this.vx = (Math.random()-0.5)*5;
-        this.vy = (Math.random()-0.5)*5;
-        this.life = 1.0;
+        const ang = Math.random() * Math.PI * 2;
+        this.vx = Math.cos(ang) * speed * Math.random();
+        this.vy = Math.sin(ang) * speed * Math.random();
+        this.life = life;
+        this.maxLife = life;
     }
-    update() { this.x += this.vx; this.y += this.vy; this.life -= 0.05; }
+    update() { this.x += this.vx; this.y += this.vy; this.life--; }
     draw() {
-        ctx.globalAlpha = Math.max(0, this.life);
+        ctx.globalAlpha = this.life / this.maxLife;
         ctx.fillStyle = this.color;
-        ctx.beginPath(); ctx.arc(this.x, this.y, 3, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, Math.PI*2); ctx.fill();
         ctx.globalAlpha = 1;
     }
 }
 
+function switchWeapon(id) {
+    me.weapon = id;
+    document.querySelectorAll('.w-btn').forEach((b, i) => {
+        b.classList.toggle('active', i === id);
+    });
+}
+
+const Weapons = [
+    { name: 'PULSE', rate: 10, speed: 15, dmg: 20, count: 1, spread: 0, color: '#00f3ff' }, // 0
+    { name: 'SPREAD', rate: 30, speed: 12, dmg: 15, count: 3, spread: 0.3, color: '#ffcc00' }, // 1
+    { name: 'RAIL', rate: 40, speed: 25, dmg: 100, count: 1, spread: 0, color: '#ff00ff' }   // 2
+];
+
 function spawnEnemy() {
     const side = Math.floor(Math.random()*4);
     let x, y;
-    if(side===0) { x=Math.random()*width; y=-30; } // Top
-    if(side===1) { x=width+30; y=Math.random()*height; } // Right
-    if(side===2) { x=Math.random()*width; y=height+30; } // Bottom
-    if(side===3) { x=-30; y=Math.random()*height; } // Left
-    
-    enemies.push({
+    const pad = 50;
+    if(side===0) { x=Math.random()*W; y=-pad; }
+    if(side===1) { x=W+pad; y=Math.random()*H; }
+    if(side===2) { x=Math.random()*W; y=H+pad; }
+    if(side===3) { x=-pad; y=Math.random()*H; }
+
+    const type = Math.random() < Math.min(0.5, gameState.wave * 0.05) ? 'shooter' : 'chaser';
+    const hpMult = 1 + (gameState.wave * 0.2);
+
+    gameState.enemies.push({
+        id: Math.random().toString(36),
         x: x, y: y,
-        hp: 20 + (wave*5),
-        speed: Math.random() * 1.5 + 1 + (wave*0.1),
-        type: Math.random() > 0.8 ? 1 : 0 // 0: Follower, 1: Shooter
+        type: type,
+        hp: (type==='chaser'?30:50) * hpMult,
+        maxHp: (type==='chaser'?30:50) * hpMult,
+        speed: (type==='chaser'?2:1) + (gameState.wave*0.1),
+        radius: type==='chaser'?15:20,
+        color: type==='chaser'?'#ff0055':'#ff6600',
+        lastShot: 0
     });
 }
 
-function updateGame() {
-    if(!gameActive) return;
+function update() {
+    if(!gameState.running) return;
 
-    // Player 1 Movement
-    player.x += input.x * 5;
-    player.y += input.y * 5;
+    // -- Player Movement (PC Overrides Touch if Keys Pressed) --
+    let dx = me.input.x;
+    let dy = me.input.y;
     
-    // Bounds
-    player.x = Math.max(20, Math.min(width-20, player.x));
-    player.y = Math.max(20, Math.min(height-20, player.y));
-    
-    // Angle (face movement or maintain last angle)
-    if(Math.abs(input.x) > 0.1 || Math.abs(input.y) > 0.1) {
-        player.angle = Math.atan2(input.y, input.x);
+    if(keys['KeyW']) dy = -1;
+    if(keys['KeyS']) dy = 1;
+    if(keys['KeyA']) dx = -1;
+    if(keys['KeyD']) dx = 1;
+
+    // Apply Velocity
+    me.x += dx * 5;
+    me.y += dy * 5;
+    me.x = Math.max(20, Math.min(W-20, me.x));
+    me.y = Math.max(20, Math.min(H-20, me.y));
+
+    // Calculate Angle
+    if(me.input.firing || Math.abs(me.input.aimX) > 0.1) {
+        me.angle = Math.atan2(me.input.aimY, me.input.aimX);
+    } else if (dx !== 0 || dy !== 0) {
+        // Face movement if not aiming
+        me.angle = Math.atan2(dy, dx);
     }
 
-    // Shooting
-    if(input.fire && frames % 10 === 0) {
-        playSound('shoot');
-        let speed = 12;
-        let spread = 0;
-        if(player.weapon === 1) spread = 0.2; // Spread
-        
-        bullets.push({x:player.x, y:player.y, vx:Math.cos(player.angle)*speed, vy:Math.sin(player.angle)*speed, owner:1});
-        if(player.weapon === 1) {
-            bullets.push({x:player.x, y:player.y, vx:Math.cos(player.angle-spread)*speed, vy:Math.sin(player.angle-spread)*speed, owner:1});
-            bullets.push({x:player.x, y:player.y, vx:Math.cos(player.angle+spread)*speed, vy:Math.sin(player.angle+spread)*speed, owner:1});
-        }
-    }
+    // -- Shooting --
+    if(me.input.firing && Date.now() - me.lastShot > (1000/60)*Weapons[me.weapon].rate) {
+        me.lastShot = Date.now();
+        const w = Weapons[me.weapon];
+        const snd = me.weapon === 2 ? 'heavy' : 'shoot';
+        Sound.play(snd);
 
-    // Multiplayer Sync: Host receives Input, updates Remote Player
-    // Multiplayer Sync: Client Just sends Input, receives State
-    
-    // Note: For this simplified standalone file, we will run logic on both sides loosely
-    // But ideally, Host sends Enemy positions.
-    // To keep it simple: Host spawns enemies and sends their positions. Client only renders them.
-    
-    if(isHost) {
-        // Spawn Enemies
-        if(frames % (100 - Math.min(50, wave*5)) === 0) spawnEnemy();
+        const startAngle = me.angle - (w.spread * (w.count-1))/2;
         
-        // Move Enemies
-        enemies.forEach(e => {
-            // Target closest player
-            let target = player;
-            if(remotePlayer.active) {
-                const d1 = Math.hypot(player.x - e.x, player.y - e.y);
-                const d2 = Math.hypot(remotePlayer.x - e.x, remotePlayer.y - e.y);
-                if(d2 < d1) target = remotePlayer;
-            }
-            
-            const ang = Math.atan2(target.y - e.y, target.x - e.x);
-            e.x += Math.cos(ang) * e.speed;
-            e.y += Math.sin(ang) * e.speed;
-        });
-
-        // Send Game State to Client
-        if(conn && conn.open) {
-            conn.send({
-                type: 'state',
-                p1: {x: player.x, y: player.y, angle: player.angle},
-                enemies: enemies,
-                score: score,
-                wave: wave
+        for(let i=0; i<w.count; i++) {
+            const ang = startAngle + (w.spread * i);
+            gameState.bullets.push({
+                x: me.x + Math.cos(me.angle)*20,
+                y: me.y + Math.sin(me.angle)*20,
+                vx: Math.cos(ang) * w.speed,
+                vy: Math.sin(ang) * w.speed,
+                dmg: w.dmg,
+                color: w.color,
+                owner: 'p1',
+                pierce: me.weapon === 2
             });
         }
+        // Recoil
+        me.x -= Math.cos(me.angle)*2;
+        me.y -= Math.sin(me.angle)*2;
     }
-    
-    // Client Side: Interpolate Remote Player (The Host)
-    // Actually, if we are Client, 'player' is US. 'remotePlayer' is HOST.
-    
-    // Update Bullets
-    for(let i=bullets.length-1; i>=0; i--) {
-        let b = bullets[i];
-        b.x += b.vx;
-        b.y += b.vy;
-        
-        // Cleanup
-        if(b.x<0 || b.x>width || b.y<0 || b.y>height) { bullets.splice(i,1); continue; }
-        
-        // Collisions
-        for(let j=enemies.length-1; j>=0; j--) {
-            let e = enemies[j];
-            let dist = Math.hypot(b.x - e.x, b.y - e.y);
-            if(dist < 20) {
-                bullets.splice(i,1);
-                e.hp -= 10;
-                if(e.hp <= 0) {
-                    enemies.splice(j,1);
-                    score += 100;
-                    playSound('explode');
-                    for(let k=0; k<5; k++) particles.push(new Particle(e.x, e.y, '#f00'));
-                }
-                break;
+
+    // -- Multiplayer Logic --
+    if(gameState.mode !== 'single') {
+        if(gameState.mode === 'host') {
+            // Host: Dictate Enemy Positions & Spawns
+            // Receive P2 Input
+            if(conn && conn.open) {
+                 // Nothing explicit here, done in on('data')
+            }
+            // Send State
+            if(conn && conn.open) {
+                conn.send({
+                    t: 'state',
+                    p1: {x:me.x, y:me.y, a:me.angle, hp:me.hp},
+                    enemies: gameState.enemies,
+                    score: gameState.score,
+                    wave: gameState.wave
+                });
+            }
+        } else {
+            // Client: Send Input
+            if(conn && conn.open) {
+                conn.send({
+                    t: 'input',
+                    x: me.x, y: me.y, a: me.angle, f: me.input.firing, w: me.weapon
+                });
             }
         }
     }
+
+    // -- Entity Updates (Run on everyone for smoothness, but Host handles collisions authoritatively) --
     
-    // Update Particles
-    for(let i=particles.length-1; i>=0; i--) {
-        particles[i].update();
-        if(particles[i].life <= 0) particles.splice(i,1);
+    // Only Host spawns enemies
+    if(gameState.mode !== 'client') {
+        const spawnRate = Math.max(30, 100 - (gameState.wave * 5));
+        if(frameCount % spawnRate === 0) spawnEnemy();
     }
-    
-    // Update UI
-    document.getElementById('scoreEl').innerText = `SCORE: ${score}`;
-    
-    frames++;
+
+    // Move Enemies
+    gameState.enemies.forEach(e => {
+        // Find nearest target
+        let target = me;
+        if(other.active) {
+            const d1 = Math.hypot(me.x - e.x, me.y - e.y);
+            const d2 = Math.hypot(other.x - e.x, other.y - e.y);
+            if(d2 < d1) target = other;
+        }
+
+        const ang = Math.atan2(target.y - e.y, target.x - e.x);
+        e.x += Math.cos(ang) * e.speed;
+        e.y += Math.sin(ang) * e.speed;
+
+        // Shooter Logic
+        if(e.type === 'shooter' && frameCount % 120 === 0) {
+            gameState.bullets.push({
+                x: e.x, y: e.y,
+                vx: Math.cos(ang)*5, vy: Math.sin(ang)*5,
+                dmg: 10, color: '#ff0000', owner: 'enemy'
+            });
+        }
+    });
+
+    // Bullets
+    for(let i=gameState.bullets.length-1; i>=0; i--) {
+        const b = gameState.bullets[i];
+        b.x += b.vx; b.y += b.vy;
+        
+        // Out of bounds
+        if(b.x < 0 || b.x > W || b.y < 0 || b.y > H) {
+            gameState.bullets.splice(i, 1); continue;
+        }
+
+        // Collisions (Host/Single logic)
+        if(gameState.mode !== 'client') {
+            if(b.owner === 'p1' || b.owner === 'p2') {
+                for(let j=gameState.enemies.length-1; j>=0; j--) {
+                    const e = gameState.enemies[j];
+                    if(Math.hypot(b.x - e.x, b.y - e.y) < e.radius + 10) {
+                        if(!b.pierce) b.dead = true;
+                        e.hp -= b.dmg;
+                        
+                        // Hit particles
+                        for(let k=0; k<3; k++) gameState.particles.push(new Particle(b.x, b.y, b.color, 3, 20));
+
+                        if(e.hp <= 0) {
+                            gameState.enemies.splice(j, 1);
+                            gameState.score += 100;
+                            gameState.shake = 10;
+                            Sound.play('explode');
+                            // Death particles
+                            for(let k=0; k<10; k++) gameState.particles.push(new Particle(e.x, e.y, e.color, 5, 40));
+                        }
+                        if(b.dead) break;
+                    }
+                }
+                if(b.dead) gameState.bullets.splice(i, 1);
+            } 
+            else if (b.owner === 'enemy') {
+                // Check Players
+                const players = [me];
+                if(other.active) players.push(other);
+                
+                players.forEach(p => {
+                    if(Math.hypot(b.x - p.x, b.y - p.y) < 15) {
+                        // In single/host, deal damage. 
+                        // Note: A real sync would be complex. Simplified: Damage local player only for visual feedback, host syncs HP
+                        if(p === me) takeDamage(10);
+                        gameState.bullets.splice(i, 1);
+                    }
+                });
+            }
+        }
+    }
+
+    // Clean particles
+    gameState.particles = gameState.particles.filter(p => p.life > 0);
+    gameState.particles.forEach(p => p.update());
+
+    // Enemy collision with players
+    if(gameState.mode !== 'client') {
+        gameState.enemies.forEach((e, idx) => {
+             if(Math.hypot(e.x - me.x, e.y - me.y) < e.radius + 15) {
+                 takeDamage(10);
+                 e.hp = 0; // Suicide bomb
+                 gameState.shake = 15;
+                 gameState.enemies.splice(idx, 1);
+                 Sound.play('explode');
+             }
+        });
+    }
+
+    // Wave Logic
+    if(gameState.score > gameState.wave * 1500) {
+        gameState.wave++;
+        document.getElementById('wave-disp').innerText = "WAVE " + gameState.wave;
+    }
+
+    // UI Updates
+    document.getElementById('score-disp').innerText = gameState.score.toString().padStart(6, '0');
+    document.getElementById('enemy-count').innerText = gameState.enemies.length;
 }
 
-function drawGame() {
-    ctx.fillStyle = '#050510'; // Dark Blue Background
-    ctx.fillRect(0, 0, width, height);
+function takeDamage(amt) {
+    me.hp -= amt;
+    gameState.shake = 15;
+    document.getElementById('hp-bar').style.width = Math.max(0, me.hp) + "%";
+    document.getElementById('hp-bar').style.backgroundColor = me.hp < 30 ? '#ff0000' : '#00ff66';
+    if(me.hp <= 0) gameOver();
+}
+
+// --- RENDERING ---
+
+function draw() {
+    // Clear & Background
+    ctx.fillStyle = '#050510';
+    ctx.fillRect(0, 0, W, H);
     
+    // Shake
+    if(gameState.shake > 0) {
+        const dx = (Math.random()-0.5)*gameState.shake;
+        const dy = (Math.random()-0.5)*gameState.shake;
+        ctx.translate(dx, dy);
+        gameState.shake *= 0.9;
+        if(gameState.shake < 1) gameState.shake = 0;
+    }
+
+    // Stars
+    ctx.fillStyle = '#fff';
+    gameState.stars.forEach(s => {
+        s.y += s.z * 0.5;
+        if(s.y > H) { s.y = 0; s.x = Math.random() * W; }
+        ctx.globalAlpha = Math.random() * 0.5;
+        ctx.fillRect(s.x, s.y, s.z, s.z);
+    });
+    ctx.globalAlpha = 1;
+
     // Grid
-    ctx.strokeStyle = '#111122';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    for(let x=0; x<width; x+=50) { ctx.moveTo(x,0); ctx.lineTo(x,height); }
-    for(let y=0; y<height; y+=50) { ctx.moveTo(0,y); ctx.lineTo(width,y); }
+    for(let x=0; x<W; x+=50) { ctx.moveTo(x,0); ctx.lineTo(x,H); }
+    for(let y=0; y<H; y+=50) { ctx.moveTo(0,y); ctx.lineTo(W,y); }
     ctx.stroke();
 
-    // Draw Player (Me)
-    drawShip(player.x, player.y, player.angle, player.color);
-    
-    // Draw Remote Player
-    if(remotePlayer.active) {
-        drawShip(remotePlayer.x, remotePlayer.y, remotePlayer.angle, remotePlayer.color);
-    }
-    
-    // Draw Enemies
-    enemies.forEach(e => {
+    // Enable Neon Glow
+    ctx.globalCompositeOperation = 'lighter';
+
+    // Bullets
+    gameState.bullets.forEach(b => {
+        ctx.shadowBlur = 10; ctx.shadowColor = b.color;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.pierce?5:3, 0, Math.PI*2); ctx.fill();
+        // Trail
+        ctx.strokeStyle = b.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x-b.vx*2, b.y-b.vy*2); ctx.stroke();
+    });
+
+    // Particles
+    gameState.particles.forEach(p => p.draw());
+
+    // Enemies
+    gameState.enemies.forEach(e => {
         ctx.save();
         ctx.translate(e.x, e.y);
-        ctx.rotate(frames * 0.1);
-        ctx.shadowBlur = 10; ctx.shadowColor = '#f00';
-        ctx.strokeStyle = '#f00';
+        // Pulse effect
+        const scale = 1 + Math.sin(Date.now()*0.01)*0.1;
+        ctx.scale(scale, scale);
+        
+        ctx.shadowBlur = 15; ctx.shadowColor = e.color;
+        ctx.strokeStyle = e.color;
         ctx.lineWidth = 3;
+        
         ctx.beginPath();
-        ctx.moveTo(15,0); ctx.lineTo(-10,10); ctx.lineTo(-10,-10); ctx.closePath();
+        if(e.type === 'chaser') {
+            ctx.moveTo(15,0); ctx.lineTo(-10, 10); ctx.lineTo(-10, -10);
+        } else {
+            ctx.moveTo(0, -15); ctx.lineTo(15, 0); ctx.lineTo(0, 15); ctx.lineTo(-15, 0);
+        }
+        ctx.closePath();
         ctx.stroke();
+        
+        // HP Bar
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = 'red';
+        ctx.fillRect(-15, -25, 30 * (e.hp/e.maxHp), 3);
+        
         ctx.restore();
     });
-    
-    // Draw Bullets
-    ctx.fillStyle = '#fff';
-    ctx.shadowBlur = 5; ctx.shadowColor = '#fff';
-    bullets.forEach(b => {
-        ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI*2); ctx.fill();
-    });
-    ctx.shadowBlur = 0;
-    
-    // Particles
-    particles.forEach(p => p.draw());
-    
-    requestAnimationFrame(loop);
+
+    // Player(s)
+    drawShip(me.x, me.y, me.angle, me.color, true);
+    if(other.active) drawShip(other.x, other.y, other.angle, other.color, false);
+
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
-function drawShip(x, y, angle, color) {
+function drawShip(x, y, angle, color, isMe) {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(angle);
-    ctx.shadowBlur = 15; ctx.shadowColor = color;
-    ctx.fillStyle = '#000';
+    
+    ctx.shadowBlur = 20; ctx.shadowColor = color;
     ctx.strokeStyle = color;
     ctx.lineWidth = 3;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    
     ctx.beginPath();
     ctx.moveTo(20, 0);
     ctx.lineTo(-15, 15);
-    ctx.lineTo(-10, 0);
+    ctx.lineTo(-5, 0);
     ctx.lineTo(-15, -15);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+
+    // Thruster
+    if(isMe ? (me.input.x!==0 || me.input.y!==0) : true) {
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'orange';
+        ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-25, 5); ctx.lineTo(-25, -5); ctx.fill();
+    }
     ctx.restore();
 }
 
+let frameCount = 0;
 function loop() {
-    updateGame();
-    drawGame();
-}
-
-// --- MULTIPLAYER SETUP ---
-
-function startSinglePlayer() {
-    document.getElementById('menu-overlay').style.display = 'none';
-    document.getElementById('ui-layer').style.display = 'block';
-    gameActive = true;
-    isHost = true; // Acts as host for local logic
-    player.x = width/2; player.y = height/2;
-    loop();
-}
-
-function startHost() {
-    isHost = true;
-    isMultiplayer = true;
-    document.getElementById('lobby-status').innerText = "Generating Link...";
-    
-    // Init Peer
-    peer = new Peer();
-    
-    peer.on('open', (id) => {
-        myId = id;
-        const joinLink = window.location.href.split('?')[0] + '?join=' + id;
-        
-        // Generate QR Code via API
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinLink)}`;
-        document.getElementById('qr-img').src = qrUrl;
-        document.getElementById('qr-container').style.display = 'block';
-        document.getElementById('lobby-status').innerText = "Waiting for Player 2...";
-        document.getElementById('invite-link').innerText = joinLink;
-    });
-    
-    peer.on('connection', (c) => {
-        conn = c;
-        setupConnection();
-        document.getElementById('lobby-status').innerText = "Player 2 Connected! Starting...";
-        setTimeout(() => {
-            document.getElementById('menu-overlay').style.display = 'none';
-            document.getElementById('ui-layer').style.display = 'block';
-            gameActive = true;
-            remotePlayer.active = true;
-            loop();
-        }, 1000);
-    });
-}
-
-function joinGame(hostId) {
-    isHost = false;
-    isMultiplayer = true;
-    document.getElementById('menu-overlay').innerHTML = "<h1>JOINING...</h1>";
-    
-    peer = new Peer();
-    peer.on('open', (id) => {
-        conn = peer.connect(hostId);
-        setupConnection();
-        
-        conn.on('open', () => {
-            document.getElementById('menu-overlay').style.display = 'none';
-            document.getElementById('ui-layer').style.display = 'block';
-            gameActive = true;
-            remotePlayer.active = true;
-            loop();
-        });
-    });
-}
-
-function setupConnection() {
-    conn.on('data', (data) => {
-        if(isHost) {
-            // Host receives P2 Input
-            if(data.type === 'input') {
-                remotePlayer.x = data.x;
-                remotePlayer.y = data.y;
-                remotePlayer.angle = data.angle;
-                if(data.fire) {
-                    // Spawn bullet for remote player
-                     bullets.push({x:remotePlayer.x, y:remotePlayer.y, vx:Math.cos(remotePlayer.angle)*12, vy:Math.sin(remotePlayer.angle)*12, owner:2});
-                     playSound('shoot');
-                }
-            }
-        } else {
-            // Client receives Game State
-            if(data.type === 'state') {
-                remotePlayer.x = data.p1.x; // Remote is Host
-                remotePlayer.y = data.p1.y;
-                remotePlayer.angle = data.p1.angle;
-                enemies = data.enemies;
-                score = data.score;
-            }
-        }
-    });
-    
-    // Client sends input loop
-    if(!isHost) {
-        setInterval(() => {
-            if(gameActive && conn.open) {
-                // Client Logic: Move myself locally, send coords to host
-                player.x += input.x * 5;
-                player.y += input.y * 5;
-                if(Math.abs(input.x) > 0.1 || Math.abs(input.y) > 0.1) player.angle = Math.atan2(input.y, input.x);
-
-                conn.send({
-                    type: 'input',
-                    x: player.x,
-                    y: player.y,
-                    angle: player.angle,
-                    fire: input.fire
-                });
-                
-                // Reset fire flag to prevent machine gun stream if packet lag
-                // input.fire = false; // Optional depending on feel
-            }
-        }, 1000/30);
+    if(gameState.running) {
+        update();
+        draw();
+        frameCount++;
+        requestAnimationFrame(loop);
     }
 }
 
-// --- INIT ---
-const urlParams = new URLSearchParams(window.location.search);
-const joinID = urlParams.get('join');
+// --- MULTIPLAYER SETUP ---
+let peer, conn;
 
-if(joinID) {
-    joinGame(joinID);
+function initGame(mode) {
+    document.getElementById('menu-screen').classList.add('hidden');
+    document.getElementById('ui-layer').classList.remove('hidden');
+    document.getElementById('controls-layer').classList.remove('hidden');
+
+    // Reset
+    me.x = W/2; me.y = H/2; me.hp = 100;
+    gameState.enemies = []; gameState.bullets = [];
+    gameState.score = 0; gameState.wave = 1;
+
+    if(mode === 'single') {
+        gameState.mode = 'single';
+        gameState.running = true;
+        loop();
+    } 
+    else if (mode === 'host') {
+        gameState.mode = 'host';
+        document.getElementById('menu-screen').classList.remove('hidden'); // Keep menu for QR
+        setupPeer(true);
+    }
+}
+
+function setupPeer(isHost, idToJoin) {
+    const status = document.getElementById('status-msg');
+    status.innerText = "Initializing Neural Link...";
+    
+    peer = new Peer(); // Cloud peer server
+    
+    peer.on('open', (id) => {
+        if(isHost) {
+            const url = window.location.href.split('?')[0] + '?join=' + id;
+            document.getElementById('invite-url').innerText = id;
+            document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
+            document.getElementById('qr-display').style.display = 'block';
+            status.innerText = "WAITING FOR PILOT...";
+        } else {
+            status.innerText = "CONNECTING TO HOST...";
+            conn = peer.connect(idToJoin);
+            setupConn();
+        }
+    });
+
+    peer.on('connection', (c) => {
+        if(isHost) {
+            conn = c;
+            setupConn();
+            status.innerText = "CONNECTED! DEPLOYING...";
+            document.getElementById('p2-status').innerText = "P2: ONLINE";
+            other.active = true;
+            setTimeout(() => {
+                document.getElementById('menu-screen').classList.add('hidden');
+                document.getElementById('ui-layer').classList.remove('hidden');
+                document.getElementById('controls-layer').classList.remove('hidden');
+                gameState.running = true;
+                loop();
+            }, 1000);
+        }
+    });
+}
+
+function setupConn() {
+    conn.on('open', () => {
+        console.log("Connected");
+        if(!gameState.running && gameState.mode === 'client') {
+            document.getElementById('menu-screen').classList.add('hidden');
+            document.getElementById('ui-layer').classList.remove('hidden');
+            document.getElementById('controls-layer').classList.remove('hidden');
+            gameState.running = true;
+            document.getElementById('p2-status').innerText = "HOST: ONLINE";
+            me.color = '#ff00ff'; // Client is pink
+            other.color = '#00f3ff';
+            other.active = true;
+            loop();
+        }
+    });
+
+    conn.on('data', (data) => {
+        if(gameState.mode === 'host') {
+            // Received Input
+            if(data.t === 'input') {
+                other.x = data.x; other.y = data.y; other.angle = data.a;
+                if(data.f) {
+                    // Spawn bullet for remote player (calculated on host)
+                     const w = Weapons[data.w || 0];
+                     if(Date.now() - (other.lastShot || 0) > (1000/60)*w.rate) {
+                         other.lastShot = Date.now();
+                         Sound.play('shoot');
+                         gameState.bullets.push({
+                            x: other.x, y: other.y,
+                            vx: Math.cos(other.angle)*w.speed, vy: Math.sin(other.angle)*w.speed,
+                            dmg: w.dmg, color: other.color, owner: 'p2', pierce: data.w===2
+                         });
+                     }
+                }
+            }
+        } else {
+            // Received State
+            if(data.t === 'state') {
+                other.x = data.p1.x; other.y = data.p1.y; other.angle = data.p1.a;
+                gameState.enemies = data.enemies;
+                gameState.score = data.score;
+                gameState.wave = data.wave;
+                document.getElementById('wave-disp').innerText = "WAVE " + gameState.wave;
+            }
+        }
+    });
+}
+
+function gameOver() {
+    gameState.running = false;
+    alert("SYSTEM FAILURE. SCORE: " + gameState.score);
+    location.reload();
+}
+
+// Auto Join
+const params = new URLSearchParams(window.location.search);
+if(params.get('join')) {
+    gameState.mode = 'client';
+    setupPeer(false, params.get('join'));
 }
 
 </script>
