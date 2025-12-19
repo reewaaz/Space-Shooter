@@ -2,673 +2,557 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Twin Stick Shooter Prototype</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Space Defender</title>
     <style>
         body {
             margin: 0;
+            padding: 0;
+            background-color: #000;
             overflow: hidden;
-            background-color: #222;
-            color: white;
             font-family: 'Courier New', Courier, monospace;
-            touch-action: none; /* Prevents scrolling on mobile */
             user-select: none;
         }
 
         #gameCanvas {
             display: block;
-            width: 100%;
-            height: 100%;
         }
 
-        /* UI Overlay Layer */
         #ui-layer {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none; /* Let touches pass through to canvas controls */
-        }
-
-        /* Weapon Selector */
-        #weapon-selector {
-            position: absolute;
-            top: 20px;
-            right: 20px;
+            pointer-events: none; /* Let clicks pass through to canvas if needed */
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            pointer-events: auto;
+            justify-content: space-between;
         }
 
-        .weapon-btn {
-            width: 50px;
-            height: 50px;
-            background: rgba(0, 0, 0, 0.5);
-            border: 2px solid #555;
+        .hud {
+            padding: 20px;
             color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             font-size: 24px;
-            cursor: pointer;
-            border-radius: 8px;
-            transition: all 0.2s;
-        }
-
-        .weapon-btn.active {
-            border-color: #0f0;
-            background: rgba(0, 255, 0, 0.2);
-            box-shadow: 0 0 10px #0f0;
-        }
-
-        /* HP Bar */
-        #hp-container {
-            position: absolute;
-            bottom: 30px;
-            right: 180px; /* Positioned to left of right stick */
+            text-shadow: 0 0 10px #fff;
             display: flex;
-            align-items: center;
-            gap: 10px;
+            justify-content: space-between;
         }
 
-        #hp-bar-bg {
-            width: 150px;
-            height: 20px;
-            background: #333;
-            border: 2px solid white;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        #hp-bar-fill {
-            width: 100%;
-            height: 100%;
-            background: #0f0;
-            transition: width 0.2s;
-        }
-
-        /* Joystick Visuals (drawn by canvas, but zones defined here) */
-        .joystick-zone {
+        #start-screen, #game-over-screen {
             position: absolute;
-            bottom: 0;
-            width: 50%;
-            height: 50%;
-            pointer-events: auto;
-        }
-        #left-zone { left: 0; }
-        #right-zone { right: 0; }
-
-        /* Joystick Hint Text */
-        .zone-hint {
-            position: absolute;
-            bottom: 50px;
-            width: 100%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             text-align: center;
-            opacity: 0.3;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 40px;
+            border: 2px solid #0ff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px #0ff;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #game-over-screen {
+            display: none;
+            border-color: #f00;
+            box-shadow: 0 0 20px #f00;
+        }
+
+        h1 {
+            color: #0ff;
+            margin: 0;
+            font-size: 48px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+
+        h2 {
+            color: #f00;
+            margin: 0;
+            font-size: 48px;
+        }
+
+        p {
+            color: #ccc;
+            font-size: 18px;
+        }
+
+        button {
+            background: transparent;
+            color: #fff;
+            border: 2px solid #fff;
+            padding: 15px 40px;
+            font-size: 20px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: 0.2s;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            background: #fff;
+            color: #000;
+            box-shadow: 0 0 15px #fff;
+        }
+
+        .controls-hint {
+            margin-top: 10px;
             font-size: 14px;
-            pointer-events: none;
+            color: #888;
         }
     </style>
 </head>
 <body>
 
+    <!-- Canvas for rendering the game -->
     <canvas id="gameCanvas"></canvas>
 
-    <!-- Invisible Touch Zones -->
-    <div id="left-zone" class="joystick-zone">
-        <div class="zone-hint">MOVE</div>
-    </div>
-    <div id="right-zone" class="joystick-zone">
-        <div class="zone-hint">AIM & SHOOT</div>
-    </div>
-
-    <!-- UI Layer -->
+    <!-- UI Overlay -->
     <div id="ui-layer">
-        <div id="weapon-selector">
-            <div class="weapon-btn active" id="btn-rail" onclick="setWeapon('rail')">📏</div> <!-- Rail -->
-            <div class="weapon-btn" id="btn-triple" onclick="setWeapon('triple')">✨</div> <!-- Triple -->
-            <div class="weapon-btn" id="btn-lightning" onclick="setWeapon('lightning')">⚡</div> <!-- Lightning -->
-            <div class="weapon-btn" id="btn-laser" onclick="setWeapon('laser')">🔴</div> <!-- Laser -->
-        </div>
-
-        <div id="hp-container">
-            <span>HP:</span>
-            <div id="hp-bar-bg">
-                <div id="hp-bar-fill"></div>
-            </div>
+        <div class="hud">
+            <div id="scoreEl">Score: 0</div>
+            <div>Level: <span id="levelEl">1</span></div>
         </div>
     </div>
 
-<script>
-/**
- * TWIN STICK SHOOTER ENGINE
- */
+    <!-- Start Screen -->
+    <div id="start-screen">
+        <h1>Neon Defender</h1>
+        <p>Defend the sector from incoming asteroids and enemies.</p>
+        <button id="startBtn">Start Mission</button>
+        <div class="controls-hint">WASD / Arrows to Move • SPACE to Shoot</div>
+    </div>
 
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+    <!-- Game Over Screen -->
+    <div id="game-over-screen">
+        <h2>Mission Failed</h2>
+        <p>Final Score: <span id="finalScore">0</span></p>
+        <button id="restartBtn">Try Again</button>
+    </div>
 
-// Game State
-let lastTime = 0;
-let score = 0;
-let gameOver = false;
-
-// Input State
-const input = {
-    leftStick: { x: 0, y: 0, active: false, originX: 0, originY: 0, currX: 0, currY: 0 },
-    rightStick: { x: 0, y: 0, active: false, originX: 0, originY: 0, currX: 0, currY: 0 }
-};
-
-// Player Config
-const player = {
-    x: 0,
-    y: 0,
-    radius: 15,
-    speed: 5,
-    angle: 0,
-    hp: 100,
-    maxHp: 100,
-    weapon: 'rail',
-    cooldown: 0
-};
-
-// Weapon Configs
-const weapons = {
-    rail: { color: '#0ff', cooldown: 40, speed: 25, damage: 50, type: 'projectile', piercing: true },
-    triple: { color: '#ff0', cooldown: 15, speed: 12, damage: 15, type: 'spread' },
-    lightning: { color: '#b0f', cooldown: 30, range: 250, damage: 40, type: 'instant' },
-    laser: { color: '#f00', cooldown: 0, range: 800, damage: 1, type: 'beam' } // Low dmg but high tick rate
-};
-
-// Entities
-let bullets = [];
-let enemies = [];
-let particles = [];
-let damageNumbers = [];
-
-// --- RESIZE HANDLING ---
-function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    // Reset player to center if first run
-    if (player.x === 0) {
-        player.x = canvas.width / 2;
-        player.y = canvas.height / 2;
-    }
-}
-window.addEventListener('resize', resize);
-resize();
-
-// --- INPUT HANDLING ---
-const leftZone = document.getElementById('left-zone');
-const rightZone = document.getElementById('right-zone');
-
-function handleTouch(e, zoneStr, type) {
-    e.preventDefault();
-    const stick = input[zoneStr];
-    const touch = e.changedTouches[0]; 
-    // Usually we track touch IDs, but for simple split screen zones, simple rect check is enough
-    
-    if (type === 'start') {
-        stick.active = true;
-        stick.originX = touch.clientX;
-        stick.originY = touch.clientY;
-        stick.currX = touch.clientX;
-        stick.currY = touch.clientY;
-        stick.x = 0;
-        stick.y = 0;
-    } else if (type === 'move' && stick.active) {
-        stick.currX = touch.clientX;
-        stick.currY = touch.clientY;
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
         
-        let dx = stick.currX - stick.originX;
-        let dy = stick.currY - stick.originY;
-        const maxDist = 50;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        
-        // Normalize
-        if (dist > maxDist) {
-            dx = (dx / dist) * maxDist;
-            dy = (dy / dist) * maxDist;
-        }
-        
-        stick.x = dx / maxDist;
-        stick.y = dy / maxDist;
-    } else if (type === 'end') {
-        stick.active = false;
-        stick.x = 0;
-        stick.y = 0;
-    }
-}
+        // UI Elements
+        const scoreEl = document.getElementById('scoreEl');
+        const levelEl = document.getElementById('levelEl');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const finalScoreEl = document.getElementById('finalScore');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
 
-// Attach listeners helper
-function attachJoystick(elem, zoneName) {
-    elem.addEventListener('touchstart', (e) => handleTouch(e, zoneName, 'start'), {passive: false});
-    elem.addEventListener('touchmove', (e) => handleTouch(e, zoneName, 'move'), {passive: false});
-    elem.addEventListener('touchend', (e) => handleTouch(e, zoneName, 'end'), {passive: false});
-    
-    // Mouse fallback for desktop testing
-    elem.addEventListener('mousedown', (e) => {
-        // Mock touch object
-        const mockE = { 
-            preventDefault: ()=>{}, 
-            changedTouches: [{ clientX: e.clientX, clientY: e.clientY }] 
+        // Game State
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let score = 0;
+        let animationId;
+        let gameActive = false;
+        let frames = 0;
+        let level = 1;
+
+        // Input handling
+        const keys = {
+            w: false, a: false, s: false, d: false,
+            ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false,
+            Space: false
         };
-        handleTouch(mockE, zoneName, 'start');
-        
-        const moveHandler = (ev) => {
-            const mockMove = { 
-                preventDefault: ()=>{}, 
-                changedTouches: [{ clientX: ev.clientX, clientY: ev.clientY }] 
-            };
-            handleTouch(mockMove, zoneName, 'move');
-        };
-        const endHandler = () => {
-            handleTouch({ preventDefault: ()=>{}, changedTouches: []}, zoneName, 'end');
-            window.removeEventListener('mousemove', moveHandler);
-            window.removeEventListener('mouseup', endHandler);
-        };
-        window.addEventListener('mousemove', moveHandler);
-        window.addEventListener('mouseup', endHandler);
-    });
-}
 
-attachJoystick(leftZone, 'leftStick');
-attachJoystick(rightZone, 'rightStick');
-
-// --- GAME LOGIC ---
-
-// Weapon Switching
-window.setWeapon = function(type) {
-    player.weapon = type;
-    document.querySelectorAll('.weapon-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('btn-' + type).classList.add('active');
-};
-
-function spawnEnemy() {
-    const edge = Math.floor(Math.random() * 4); // 0:top, 1:right, 2:bottom, 3:left
-    let ex, ey;
-    const buffer = 50;
-    
-    if (edge === 0) { ex = Math.random() * canvas.width; ey = -buffer; }
-    else if (edge === 1) { ex = canvas.width + buffer; ey = Math.random() * canvas.height; }
-    else if (edge === 2) { ex = Math.random() * canvas.width; ey = canvas.height + buffer; }
-    else { ex = -buffer; ey = Math.random() * canvas.height; }
-
-    enemies.push({
-        x: ex,
-        y: ey,
-        radius: 15,
-        hp: 30 + (score * 2), // Difficulty scaling
-        speed: 1.5 + (Math.random() * 1),
-        maxHp: 30 + (score * 2)
-    });
-}
-
-function update(dt) {
-    if (gameOver) return;
-
-    // 1. Move Player
-    if (input.leftStick.active) {
-        player.x += input.leftStick.x * player.speed;
-        player.y += input.leftStick.y * player.speed;
-        
-        // Boundaries
-        player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
-        player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
-    }
-
-    // 2. Aim & Shoot
-    if (input.rightStick.active) {
-        const rx = input.rightStick.x;
-        const ry = input.rightStick.y;
-        if (Math.abs(rx) > 0.1 || Math.abs(ry) > 0.1) {
-            player.angle = Math.atan2(ry, rx);
-            
-            // Fire Weapon
-            if (player.cooldown <= 0) {
-                fireWeapon(rx, ry);
+        window.addEventListener('keydown', (e) => {
+            if(e.code === 'Space') keys.Space = true;
+            if(keys.hasOwnProperty(e.key) || keys.hasOwnProperty(e.code)) {
+                keys[e.key] = true;
+                keys[e.code] = true;
             }
-        }
-    }
-    if (player.cooldown > 0) player.cooldown--;
+        });
 
-    // 3. Update Bullets
-    for (let i = bullets.length - 1; i >= 0; i--) {
-        let b = bullets[i];
-        b.x += Math.cos(b.angle) * b.speed;
-        b.y += Math.sin(b.angle) * b.speed;
-        b.life--;
+        window.addEventListener('keyup', (e) => {
+            if(e.code === 'Space') keys.Space = false;
+            if(keys.hasOwnProperty(e.key) || keys.hasOwnProperty(e.code)) {
+                keys[e.key] = false;
+                keys[e.code] = false;
+            }
+        });
 
-        // Remove if off screen or dead
-        if (b.life <= 0 || b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
-            bullets.splice(i, 1);
-            continue;
-        }
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
 
-        // Collision with Enemies
-        for (let j = enemies.length - 1; j >= 0; j--) {
-            let e = enemies[j];
-            let dist = Math.hypot(b.x - e.x, b.y - e.y);
-            if (dist < e.radius + b.radius) {
-                // Hit
-                damageEnemy(e, b.damage);
-                createParticles(e.x, e.y, b.color, 3);
+        // Classes
+        class Player {
+            constructor() {
+                this.velocity = { x: 0, y: 0 };
+                this.rotation = 0;
+                this.opacity = 1;
                 
-                if (!b.piercing) {
-                    bullets.splice(i, 1);
-                    break; 
+                const image = new Image();
+                this.width = 30;
+                this.height = 30;
+                this.x = canvas.width / 2;
+                this.y = canvas.height - 100;
+                this.color = '#0ff';
+                this.speed = 7;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.opacity;
+                ctx.translate(this.x, this.y);
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 15;
+                
+                // Draw a simple ship shape
+                ctx.beginPath();
+                ctx.moveTo(0, -this.height/2); // Nose
+                ctx.lineTo(this.width/2, this.height/2); // Right corner
+                ctx.lineTo(0, this.height/4); // Indent
+                ctx.lineTo(-this.width/2, this.height/2); // Left corner
+                ctx.closePath();
+                ctx.stroke();
+                
+                // Engine flame
+                if (keys.ArrowUp || keys.w) {
+                    ctx.beginPath();
+                    ctx.moveTo(-5, this.height/4);
+                    ctx.lineTo(0, this.height/2 + Math.random() * 10 + 5);
+                    ctx.lineTo(5, this.height/4);
+                    ctx.fillStyle = '#fa0';
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            }
+
+            update() {
+                if (!this.opacity) return;
+
+                // Movement
+                if ((keys.ArrowLeft || keys.a) && this.x > this.width)  this.velocity.x = -this.speed;
+                else if ((keys.ArrowRight || keys.d) && this.x < canvas.width - this.width) this.velocity.x = this.speed;
+                else this.velocity.x = 0;
+
+                if ((keys.ArrowUp || keys.w) && this.y > this.height) this.velocity.y = -this.speed;
+                else if ((keys.ArrowDown || keys.s) && this.y < canvas.height - this.height) this.velocity.y = this.speed;
+                else this.velocity.y = 0;
+
+                this.x += this.velocity.x;
+                this.y += this.velocity.y;
+
+                this.draw();
+            }
+        }
+
+        class Projectile {
+            constructor({ position, velocity }) {
+                this.position = position;
+                this.velocity = velocity;
+                this.radius = 3;
+                this.color = '#ff0';
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 10;
+                ctx.closePath();
+            }
+
+            update() {
+                this.position.x += this.velocity.x;
+                this.position.y += this.velocity.y;
+                this.draw();
+            }
+        }
+
+        class Enemy {
+            constructor() {
+                this.velocity = {
+                    x: 0,
+                    y: (Math.random() * 2 + 1) + (level * 0.5) // Speed increases with level
+                };
+                
+                this.radius = Math.random() * 15 + 15;
+                this.position = {
+                    x: Math.random() * (canvas.width - this.radius * 2) + this.radius,
+                    y: -this.radius // Start just off screen
+                };
+                this.color = `hsl(${Math.random() * 30 + 330}, 50%, 50%)`; // Red/Pinkish
+                this.spin = 0;
+                this.spinSpeed = Math.random() * 0.1 - 0.05;
+                this.sides = Math.floor(Math.random() * 4) + 3; // 3 to 6 sides
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.position.x, this.position.y);
+                ctx.rotate(this.spin);
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 10;
+                
+                // Draw polygon
+                ctx.beginPath();
+                for (let i = 0; i < this.sides; i++) {
+                    ctx.lineTo(
+                        this.radius * Math.cos(this.spin + i * 2 * Math.PI / this.sides),
+                        this.radius * Math.sin(this.spin + i * 2 * Math.PI / this.sides)
+                    );
+                }
+                ctx.closePath();
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            update() {
+                this.position.y += this.velocity.y;
+                this.spin += this.spinSpeed;
+                this.draw();
+            }
+        }
+
+        class Particle {
+            constructor({ position, velocity, radius, color }) {
+                this.position = position;
+                this.velocity = velocity;
+                this.radius = radius;
+                this.color = color;
+                this.opacity = 1;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.opacity;
+                ctx.beginPath();
+                ctx.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.restore();
+            }
+
+            update() {
+                this.position.x += this.velocity.x;
+                this.position.y += this.velocity.y;
+                this.opacity -= 0.02; // Fade out
+                this.draw();
+            }
+        }
+
+        class Star {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.radius = Math.random() * 1.5;
+                this.dy = Math.random() * 0.5 + 0.1; // Fall speed
+                this.opacity = Math.random();
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.opacity;
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            update() {
+                this.y += this.dy + (level * 0.2); // Stars move faster at higher levels
+                if (this.y > canvas.height) {
+                    this.y = 0;
+                    this.x = Math.random() * canvas.width;
+                }
+                this.draw();
+            }
+        }
+
+        // Game Variables
+        let player;
+        let projectiles = [];
+        let enemies = [];
+        let particles = [];
+        let stars = [];
+        
+        // Cooldown for shooting
+        let lastShot = 0;
+        const shootDelay = 200; // ms
+
+        function init() {
+            player = new Player();
+            projectiles = [];
+            enemies = [];
+            particles = [];
+            score = 0;
+            level = 1;
+            frames = 0;
+            scoreEl.innerHTML = 'Score: 0';
+            levelEl.innerHTML = '1';
+            
+            // Initialize stars
+            stars = [];
+            for(let i=0; i<100; i++) {
+                stars.push(new Star());
+            }
+        }
+
+        function createExplosion({x, y, color}) {
+            for (let i = 0; i < 15; i++) {
+                particles.push(new Particle({
+                    position: { x, y },
+                    velocity: {
+                        x: (Math.random() - 0.5) * 4,
+                        y: (Math.random() - 0.5) * 4
+                    },
+                    radius: Math.random() * 3,
+                    color: color
+                }));
+            }
+        }
+
+        function animate() {
+            if (!gameActive) return;
+            animationId = requestAnimationFrame(animate);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'; // Creates trails
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Background Stars
+            stars.forEach(star => star.update());
+
+            // Player logic
+            player.update();
+
+            // Shooting logic
+            if (keys.Space) {
+                const now = Date.now();
+                if (now - lastShot > shootDelay) {
+                    projectiles.push(new Projectile({
+                        position: { x: player.x, y: player.y - 15 },
+                        velocity: { x: 0, y: -10 }
+                    }));
+                    lastShot = now;
                 }
             }
-        }
-    }
 
-    // 4. Update Enemies
-    if (Math.random() < 0.02) spawnEnemy(); // Spawn rate
+            // Projectiles
+            for (let index = projectiles.length - 1; index >= 0; index--) {
+                const projectile = projectiles[index];
+                projectile.update();
 
-    for (let i = enemies.length - 1; i >= 0; i--) {
-        let e = enemies[i];
-        
-        // Move towards player
-        let dx = player.x - e.x;
-        let dy = player.y - e.y;
-        let dist = Math.hypot(dx, dy);
-        
-        e.x += (dx / dist) * e.speed;
-        e.y += (dy / dist) * e.speed;
-
-        // Collision with Player
-        if (dist < player.radius + e.radius) {
-            player.hp -= 1; // Damage over time on contact
-            createParticles(player.x, player.y, '#f00', 1);
-            if (player.hp <= 0) {
-                gameOver = true;
-                setTimeout(() => location.reload(), 2000);
-            }
-        }
-
-        if (e.hp <= 0) {
-            createParticles(e.x, e.y, '#fff', 8);
-            score++;
-            enemies.splice(i, 1);
-        }
-    }
-
-    // 5. Update Particles
-    for (let i = particles.length - 1; i >= 0; i--) {
-        let p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life--;
-        if (p.life <= 0) particles.splice(i, 1);
-    }
-
-    // Update HP UI
-    const hpPct = Math.max(0, (player.hp / player.maxHp) * 100);
-    document.getElementById('hp-bar-fill').style.width = hpPct + "%";
-}
-
-function fireWeapon(vx, vy) {
-    const config = weapons[player.weapon];
-    const angle = Math.atan2(vy, vx);
-    
-    player.cooldown = config.cooldown;
-
-    if (config.type === 'projectile') {
-        bullets.push({
-            x: player.x, y: player.y,
-            angle: angle,
-            speed: config.speed,
-            damage: config.damage,
-            color: config.color,
-            radius: 5,
-            life: 100,
-            piercing: config.piercing
-        });
-    } 
-    else if (config.type === 'spread') {
-        for (let i = -1; i <= 1; i++) {
-            bullets.push({
-                x: player.x, y: player.y,
-                angle: angle + (i * 0.25), // ~15 degrees
-                speed: config.speed,
-                damage: config.damage,
-                color: config.color,
-                radius: 4,
-                life: 60,
-                piercing: false
-            });
-        }
-    }
-    else if (config.type === 'instant') {
-        // Lightning: Find closest enemy
-        let nearest = null;
-        let minDist = config.range;
-        
-        enemies.forEach(e => {
-            let d = Math.hypot(e.x - player.x, e.y - player.y);
-            if (d < minDist) {
-                minDist = d;
-                nearest = e;
-            }
-        });
-
-        if (nearest) {
-            damageEnemy(nearest, config.damage);
-            // Visual Effect stored in global particles for rendering
-            particles.push({
-                type: 'lightning',
-                sx: player.x, sy: player.y,
-                ex: nearest.x, ey: nearest.y,
-                life: 5,
-                color: config.color
-            });
-            // Simple Chain (one jump)
-            let nextNearest = null;
-            let nextMinDist = 200;
-            enemies.forEach(e => {
-                if (e === nearest) return;
-                let d = Math.hypot(e.x - nearest.x, e.y - nearest.y);
-                if (d < nextMinDist) {
-                    nextMinDist = d;
-                    nextNearest = e;
+                // Remove from edges
+                if (projectile.position.y + projectile.radius < 0) {
+                    projectiles.splice(index, 1);
                 }
-            });
-            if (nextNearest) {
-                damageEnemy(nextNearest, config.damage / 2);
-                particles.push({
-                    type: 'lightning',
-                    sx: nearest.x, sy: nearest.y,
-                    ex: nextNearest.x, ey: nextNearest.y,
-                    life: 5,
-                    color: config.color
-                });
             }
-        }
-    }
-    else if (config.type === 'beam') {
-        // Laser logic is mostly visual in Draw, but we apply damage here
-        // Raycast logic
-        let hit = false;
-        let endX = player.x + Math.cos(angle) * config.range;
-        let endY = player.y + Math.sin(angle) * config.range;
 
-        // Check intersection with enemies
-        for (let e of enemies) {
-            // Simple check: distance to line segment
-            // (Math omitted for brevity, using simple proximity to beam center)
-            // A true raycast against circles is better, but this is a prototype
-            let distToPlayer = Math.hypot(e.x - player.x, e.y - player.y);
-            if (distToPlayer > config.range) continue;
-            
-            // Check angular difference
-            let angleToEnemy = Math.atan2(e.y - player.y, e.x - player.x);
-            let diff = Math.abs(angle - angleToEnemy);
-            // Normalize angle diff
-            if (diff > Math.PI) diff = 2 * Math.PI - diff;
-            
-            if (diff < 0.1) { // Very narrow cone
-                damageEnemy(e, config.damage);
-                createParticles(e.x, e.y, config.color, 1);
+            // Particles (Explosions)
+            for (let index = particles.length - 1; index >= 0; index--) {
+                const particle = particles[index];
+                if (particle.opacity <= 0) {
+                    particles.splice(index, 1);
+                } else {
+                    particle.update();
+                }
             }
+
+            // Enemies
+            for (let index = enemies.length - 1; index >= 0; index--) {
+                const enemy = enemies[index];
+                enemy.update();
+
+                // Collision: Projectile hit Enemy
+                for (let pIndex = projectiles.length - 1; pIndex >= 0; pIndex--) {
+                    const projectile = projectiles[pIndex];
+                    const dist = Math.hypot(projectile.position.x - enemy.position.x, projectile.position.y - enemy.position.y);
+                    
+                    if (dist - enemy.radius - projectile.radius < 1) {
+                        // Create explosion
+                        createExplosion({x: enemy.position.x, y: enemy.position.y, color: enemy.color});
+                        
+                        // Increase score
+                        score += 100;
+                        scoreEl.innerHTML = `Score: ${score}`;
+                        
+                        // Level up check
+                        if(score % 2000 === 0) {
+                            level++;
+                            levelEl.innerHTML = level;
+                            // Add score bonus notification logic here if desired
+                        }
+
+                        // Remove Enemy and Projectile
+                        setTimeout(() => {
+                            enemies.splice(index, 1);
+                            projectiles.splice(pIndex, 1);
+                        }, 0);
+                    }
+                }
+
+                // Collision: Enemy hit Player
+                const distPlayer = Math.hypot(player.x - enemy.position.x, player.y - enemy.position.y);
+                if (distPlayer - enemy.radius - 10 < 1) {
+                    endGame();
+                }
+
+                // Remove if off screen
+                if (enemy.position.y - enemy.radius > canvas.height) {
+                    enemies.splice(index, 1);
+                    // Penalty for missing enemies? 
+                    // score -= 50; 
+                }
+            }
+
+            // Spawning Enemies
+            // Spawn rate increases with level
+            const spawnRate = Math.max(20, 100 - (level * 5)); 
+            if (frames % spawnRate === 0) {
+                enemies.push(new Enemy());
+            }
+
+            frames++;
         }
-        
-        // Visual
-        particles.push({
-            type: 'beam',
-            sx: player.x, sy: player.y,
-            ex: endX, ey: endY,
-            life: 1,
-            color: config.color
-        });
-    }
-}
 
-function damageEnemy(e, amt) {
-    e.hp -= amt;
-    // visual pop
-    e.radius = 20; 
-}
-
-function createParticles(x, y, color, count) {
-    for(let i=0; i<count; i++) {
-        particles.push({
-            x: x, y: y,
-            vx: (Math.random() - 0.5) * 5,
-            vy: (Math.random() - 0.5) * 5,
-            life: 20,
-            color: color,
-            type: 'spark'
-        });
-    }
-}
-
-// --- RENDER ---
-function draw() {
-    // Clear
-    ctx.fillStyle = '#222';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw Joysticks (Visual Feedback)
-    if (input.leftStick.active) {
-        drawJoy(input.leftStick.originX, input.leftStick.originY, input.leftStick.currX, input.leftStick.currY);
-    }
-    if (input.rightStick.active) {
-        drawJoy(input.rightStick.originX, input.rightStick.originY, input.rightStick.currX, input.rightStick.currY);
-    }
-
-    // Draw Player
-    ctx.save();
-    ctx.translate(player.x, player.y);
-    ctx.rotate(player.angle);
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.moveTo(15, 0); // Nose
-    ctx.lineTo(-10, 10);
-    ctx.lineTo(-5, 0);
-    ctx.lineTo(-10, -10);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-
-    // Draw Enemies
-    enemies.forEach(e => {
-        // Reset radius pop effect
-        if(e.radius > 15) e.radius -= 1;
-        
-        ctx.save();
-        ctx.translate(e.x, e.y);
-        ctx.strokeStyle = '#f55';
-        ctx.lineWidth = 3;
-        // Draw X shape
-        ctx.beginPath();
-        ctx.moveTo(-e.radius/2, -e.radius/2);
-        ctx.lineTo(e.radius/2, e.radius/2);
-        ctx.moveTo(e.radius/2, -e.radius/2);
-        ctx.lineTo(-e.radius/2, e.radius/2);
-        ctx.stroke();
-        ctx.restore();
-    });
-
-    // Draw Bullets
-    bullets.forEach(b => {
-        ctx.fillStyle = b.color;
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-        ctx.fill();
-    });
-
-    // Draw Particles / Effects
-    particles.forEach(p => {
-        ctx.strokeStyle = p.color;
-        ctx.lineWidth = 2;
-        
-        if (p.type === 'spark') {
-            ctx.globalAlpha = p.life / 20;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 2, 0, Math.PI*2);
-            ctx.stroke();
-        } else if (p.type === 'lightning') {
-            ctx.globalAlpha = p.life / 5;
-            ctx.beginPath();
-            ctx.moveTo(p.sx, p.sy);
-            // Midpoint jitter
-            let midX = (p.sx + p.ex) / 2 + (Math.random()-0.5)*20;
-            let midY = (p.sy + p.ey) / 2 + (Math.random()-0.5)*20;
-            ctx.lineTo(midX, midY);
-            ctx.lineTo(p.ex, p.ey);
-            ctx.stroke();
-        } else if (p.type === 'beam') {
-            ctx.globalAlpha = 0.5;
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(p.sx, p.sy);
-            ctx.lineTo(p.ex, p.ey);
-            ctx.stroke();
+        function startGame() {
+            init();
+            gameActive = true;
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            animate();
         }
-        ctx.globalAlpha = 1;
-    });
 
-    // Game Over Overlay
-    if (gameOver) {
-        ctx.fillStyle = 'rgba(0,0,0,0.7)';
-        ctx.fillRect(0,0,canvas.width, canvas.height);
-        ctx.fillStyle = '#fff';
-        ctx.font = '40px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText("GAME OVER", canvas.width/2, canvas.height/2);
-        ctx.font = '20px Arial';
-        ctx.fillText("Score: " + score, canvas.width/2, canvas.height/2 + 40);
-    }
-}
+        function endGame() {
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            createExplosion({x: player.x, y: player.y, color: '#fff'});
+            
+            // Draw one last frame to show explosion
+            particles.forEach(p => p.update());
+            
+            finalScoreEl.innerHTML = score;
+            gameOverScreen.style.display = 'flex';
+        }
 
-function drawJoy(ox, oy, cx, cy) {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.lineWidth = 2;
-    // Base
-    ctx.beginPath();
-    ctx.arc(ox, oy, 50, 0, Math.PI * 2);
-    ctx.stroke();
-    // Stick
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.beginPath();
-    ctx.arc(cx, cy, 20, 0, Math.PI * 2);
-    ctx.fill();
-}
+        // Event Listeners for Buttons
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
 
-// --- MAIN LOOP ---
-function loop(timestamp) {
-    const dt = timestamp - lastTime;
-    lastTime = timestamp;
+        // Initial render for background
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    update(dt);
-    draw();
-    requestAnimationFrame(loop);
-}
-
-requestAnimationFrame(loop);
-
-</script>
+    </script>
 </body>
 </html>
